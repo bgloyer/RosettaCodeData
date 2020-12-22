@@ -1,167 +1,87 @@
-#include <algorithm>
-#include <array>
-#include <chrono>
-#include <initializer_list>
 #include <iostream>
-#include <mutex>
-#include <random>
-#include <string>
-#include <string_view>
+#include <set>
 #include <tuple>
-
-#include <any>
-#include <variant>
+#include <vector>
 
 using namespace std;
 
-std::variant<int, double> c = 3.4;
-
-std::variant<int, std::initializer_list<int>> a = 3;
-std::initializer_list<std::any> b = {3, 3.6};
-//auto cdd = {3, "ddd"};
-//std::variant<int, const std::initializer_list<int>> bb = {3, 3};
-
-void dddd(int d)
+// print a single payload
+template<typename P>
+void PrintPayloads(const P &payloads, int index, bool isLast)
 {
+    if(index < 0 || index >= (int)size(payloads)) cout << "null";        
+    else cout << "'" << payloads[index] << "'";
+    if (!isLast) cout << ", ";  // add a comma between elements
 }
 
-void constexpr printNestedData(int i)
+// print a tuple of playloads
+template<typename P, typename... Ts>
+void PrintPayloads(const P &payloads, tuple<Ts...> const& nestedTuple, bool isLast = true)
 {
-  //  cout << i;
+    std::apply  // recursively call PrintPayloads on each element of the tuple
+    (
+        [&payloads, isLast](Ts const&... tupleArgs)
+        {
+            size_t n{0};
+            cout << "[";
+            (PrintPayloads(payloads, tupleArgs, (++n == sizeof...(Ts)) ), ...);
+            cout << "]";
+            cout << (isLast ? "\n" : ",\n");
+        }, nestedTuple
+    );
 }
 
-void constexpr printNestedData(auto tuple);
+// find the unique index of a single index (helper for the function below)
+void FindUniqueIndexes(set<int> &indexes, int index)
+{
+    indexes.insert(index);
+}
 
-// auto l3 = [&os](Ts const&... tupleArgs)
-//         {
-//             os << '[';
-//             std::size_t n{0};
-//             ((os << tupleArgs << (++n != sizeof...(Ts) ? ", " : "")), ...);
-//             os << ']';
-//         }
-
+// find the unique indexes in the tuples
 template<typename... Ts>
-std::ostream& operator<<(std::ostream& os, std::tuple<Ts...> const& theTuple)
+void FindUniqueIndexes(set<int> &indexes, std::tuple<Ts...> const& nestedTuple)
 {
     std::apply
     (
-        [&os](Ts const&... tupleArgs)
+        [&indexes](Ts const&... tupleArgs)
         {
-            os << '[';
-            std::size_t n{0};
-            ((os << tupleArgs << (++n != sizeof...(Ts) ? ", " : "")), ...);
-            os << ']';
-        }, theTuple
-    );
-    return os;
-}
-
-// auto mt(void)
-// {
-//     return make_tuple();
-// }
-
-// auto mt(int index)
-// {
-//    return make_tuple(index);
-// }
-
-auto mt(tuple<int> t1)
-{
-   return t1;
-}
-
-template<typename... T>
-auto mt(T ... tpl)
-{
-    if constexpr(sizeof...(T) == 0)
-    {
-        return make_tuple();
-    }
-     else if constexpr(sizeof...(T) == 1)
-    {
-        return make_tuple(42);
-    }
-    else
-    {
-//    tuple_cat(make_tuple(mt(tpl)) ...);
-      return make_tuple(tpl ...);
-    }
-}
-
-
-void pp(const std::vector<const char*> &payloads, int index)
-{
-    cout << payloads[index] << " ";
-}
-
-template<typename... T>
-void pp(const std::vector<const char*> &payloads, std::tuple<T...> const& theTuple)
-{
-    std::apply
-    (
-        [payloads](T const&... tupleArgs)
-        {
-            cout << "{ ";
-            (pp(payloads, tupleArgs), ...);
-            cout << "}\n";
-        }, theTuple
+            (FindUniqueIndexes(indexes, tupleArgs),...);
+        }, nestedTuple
     );
 }
 
-
-
-// auto l3 = [](Ts const&... tupleArgs)
-//         {
-//            printNestedData(Ts);
-//            printNestedData(tupleArgs);
-//         }
-        
-        
-//auto lb = [](auto ...x){std::make_tuple(dddd(x)...);};
-auto sdfsdf = [](auto ...x){std::make_tuple(x.do_something()...);};
-//void constexpr printNestedData(auto tuple)
-//{
-  //  std::apply(lb , tuple);
-//}
-
-tuple<int, tuple< tuple<int, int>, int>> fn()
+// print the payloads that were not used
+template<typename P>
+void PrintUnusedPayloads(const set<int> &usedIndexes, const P &payloads)
 {
-    return {1, {{2, 3}, 5}};
+    for(size_t i = 0; i < size(payloads); i++)
+    {
+        if(usedIndexes.find(i) == usedIndexes.end() ) cout << payloads[i] << "\n";
+    }
 }
- 
 
 int main()
 {
-
+    // define the playloads, they can be in most containers
     vector payloads {"Payload#0", "Payload#1", "Payload#2", "Payload#3", "Payload#4", "Payload#5", "Payload#6"};
-    
-    auto q1 = mt(1);
-    auto q2 = mt();
-    auto q = mt({1});
-    
-    auto z = fn();
-    
-    cout << z;
-    
-    pp(payloads, z);
-    
-  //  printNestedData(z);
-    
-    std::initializer_list<std::initializer_list<int>> t = 
-      {{1, 2},
-          {3, 4, 1}, 
-          {5}};
+    const char *shortPayloads[] {"Payload#0", "Payload#1", "Payload#2", "Payload#3"}; // as a C array
 
-//auto tpl = make_tuple(make_tuple(1, 2), make_tuple(3, 4, 1), 5);
+    // define the indexes as a nested tuple
+    auto tpl = make_tuple(make_tuple(
+        make_tuple(1, 2),
+        make_tuple(3, 4, 1),
+        5));
 
-          
-          
-// constexpr std::initializer_list<std::any> a =
-//       {{1, 2},
-//        {3, 4, 1}, 
-//      5};
+    cout << "Mapping indexes to payloads:\n";
+    PrintPayloads(payloads, tpl);      
 
-  std::cout << "\n";
-  return 0;
+    cout << "\nFinding unused payloads:\n";
+    set<int> usedIndexes;
+    FindUniqueIndexes(usedIndexes, tpl);
+    PrintUnusedPayloads(usedIndexes, payloads);
+
+    cout << "\nMapping to some out of range payloads:\n";
+    PrintPayloads(shortPayloads, tpl);      
+    
+    return 0;
 }
