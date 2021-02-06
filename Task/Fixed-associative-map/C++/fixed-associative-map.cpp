@@ -18,32 +18,40 @@ public:
     FixedMap(T map)
     : T(map), m_defaultValues(move(map)){}
     
-    // Expose members of the base class that are not able to add or remove keys so 
-    // that FixedMap will behave like a standard container.
-    using T::begin;
+    // Expose members of the base class that do not modify the map.
     using T::cbegin;
-    using T::end;
     using T::cend;
-    using T::at;
     using T::empty;
     using T::find;
     using T::size;
+
+    // Also expose members that can modify values but not add or remove keys.    
+    using T::at;
+    using T::begin;
+    using T::end;
     
     // The [] operator will normally add a new key if the key is not already in the
     // map.  Instead, throw an error if the key is missing.
-    auto& operator[](typename T::key_type key)
+    auto& operator[](typename T::key_type&& key)
     {
-        auto iterator = this->find(key);
-        if(iterator == this->end()) throw out_of_range("key not found");
-        return iterator->second;
+        // Make it behave like at()
+        return this->at(forward<typename T::key_type>(key));
     }
     
-    // Reset the value of key to its initial value.  Thows an error
-    // if the key is missing.
-    void reset(typename T::key_type key)
+    // Instead of removing a key, change the sematics of erase() to restore
+    // the original value of the key.
+    void erase(typename T::key_type&& key)
     {
         T::operator[](key) = m_defaultValues.at(key);
     }
+
+    // Also change the sematics of clear() to restore all keys
+    void clear()
+    {
+        // Reset the base class using the defaults
+        T::operator=(m_defaultValues);
+    }
+    
 };
 
 // Print the contents of a map
@@ -53,29 +61,40 @@ auto PrintMap = [](const auto &map)
     {
         cout << "{" << key << " : " << value << "} ";
     }
-    cout << "\n";
+    cout << "\n\n";
 };
 
 int main(void) 
 {
     // Create a fixed map based on the standard map
-    FixedMap<map<const char *, int>> fixedMap ({
+    cout << "Map intialized with values\n";
+    FixedMap<map<string, int>> fixedMap ({
         {"a", 1},
         {"b", 2}});
     PrintMap(fixedMap);
     
-    // Change the values of the keys
+    cout << "Change the values of the keys\n";
     fixedMap["a"] = 55;
     fixedMap["b"] = 56;
     PrintMap(fixedMap);
     
-    // Reset a key
+    cout << "Reset the 'a' key\n";
     fixedMap.reset("a");
     PrintMap(fixedMap);
     
+    cout << "Change the values the again\n";
+    fixedMap["a"] = 88;
+    fixedMap["b"] = 99;
+    PrintMap(fixedMap);
+    
+    cout << "Reset all keys\n";
+    fixedMap.reset_all();
+    PrintMap(fixedMap);
+  
     try
     {
         // Adding or retrieving a missing key is a run time error
+        cout << "Try to add a new key\n";
         fixedMap["newKey"] = 99;
     }
     catch (exception &ex)
