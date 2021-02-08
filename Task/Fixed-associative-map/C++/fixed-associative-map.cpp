@@ -79,7 +79,7 @@ int main(void)
     PrintMap(fixedMap);
     
     cout << "Reset the 'a' key\n";
-    fixedMap.reset("a");
+    fixedMap.erase("a");
     PrintMap(fixedMap);
     
     cout << "Change the values the again\n";
@@ -88,7 +88,7 @@ int main(void)
     PrintMap(fixedMap);
     
     cout << "Reset all keys\n";
-    fixedMap.reset_all();
+    fixedMap.clear();
     PrintMap(fixedMap);
   
     try
